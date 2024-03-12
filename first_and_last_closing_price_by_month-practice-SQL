@@ -1,0 +1,38 @@
+with cte1 as (
+	SELECT
+		date,
+		ROW_NUMBER() OVER (PARTITION BY (EXTRACT(month FROM date)) ORDER BY date asc) rank_first,
+		ROW_NUMBER() OVER (PARTITION BY (EXTRACT(month FROM date)) ORDER BY date desc) rank_last,
+		EXTRACT(month FROM date) month_number
+	FROM
+		tesla_stock ts1
+	WHERE
+		date BETWEEN '2015-01-01' AND '2015-12-31'
+), cte2 as (
+	SELECT
+		MIN(date) first_date,
+		MAX(date) last_date,
+		month_number
+	FROM	
+		cte1
+	WHERE 
+		rank_first = 1
+		OR
+		rank_last = 1
+	GROUP BY 
+		3
+	ORDER BY
+		3
+)
+SELECT
+	month_number,
+	first_date,
+	first_close.close,
+	last_date,
+	last_close.close
+FROM
+	cte2
+INNER JOIN
+	tesla_stock first_close ON first_close.date = cte2.first_date
+INNER JOIN
+	tesla_stock last_close ON last_close.date = cte2.last_date
